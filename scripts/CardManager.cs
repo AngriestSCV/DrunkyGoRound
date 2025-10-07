@@ -7,96 +7,98 @@ using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
 
-public class CardManager : UdonSharpBehaviour
-{
-    const string dealCard = "deal-card";
-    const string returnCard = "return-card";
-
-    public Animator CardAnimator;
-    public VRCObjectPool Pool;
-    public Collider CardDeckCollider;
-
-    public Transform CardMovementAnchor;
-
-    public bool Verbose;
-
-    GameObject Card;
-
-    public void _DealCard()
+namespace AngryLabs.Props.DrunkyGoRound{
+    public class CardManager : UdonSharpBehaviour
     {
-        Pool.Shuffle();
+        const string dealCard = "deal-card";
+        const string returnCard = "return-card";
 
-        if (Card != null)
+        public Animator CardAnimator;
+        public VRCObjectPool Pool;
+        public Collider CardDeckCollider;
+
+        public Transform CardMovementAnchor;
+
+        public bool Verbose;
+
+        GameObject Card;
+
+        public void _DealCard()
         {
-            _ReturnCard();
-            return;
+            Pool.Shuffle();
+
+            if (Card != null)
+            {
+                _ReturnCard();
+                return;
+            }
+
+            Card = Pool.TryToSpawn();
+            if (Card == null)
+            {
+                Debug.LogError($"CardManager: Card was null when spawning.");
+                return;
+            }
+
+
+            Card.transform.SetParent(CardMovementAnchor, false);
+            Card.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+            if (Card.transform.parent != CardMovementAnchor)
+            {
+                Debug.LogError($"CardManager: Setting the card parent seems to have failed");
+            }
+
+            CardAnimator.SetTrigger(dealCard);
+
+            if (Verbose)
+                Debug.Log($"Cardmanager: Dealt card {Card.name}");
         }
 
-        Card = Pool.TryToSpawn();
-        if (Card == null)
+        private void ReturnCardToPool()
         {
-            Debug.LogError($"CardManager: Card was null when spawning.");
-            return;
+            if (Card != null)
+            {
+                if (Verbose)
+                    Debug.Log($"CardManager: Setting Card {Card.name} to inactive and returning to pool");
+
+                Card.SetActive(false);
+                Pool.Return(Card);
+            }
+            Card = null;
         }
 
 
-        Card.transform.SetParent(CardMovementAnchor, false);
-        Card.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
-
-        if (Card.transform.parent != CardMovementAnchor)
+        public void _ReturnCard()
         {
-            Debug.LogError($"CardManager: Setting the card parent seems to have failed");
+            string cardName;
+
+            if (Card == null)
+                cardName = "[null]";
+            else
+                cardName = Card.name;
+
+            if (Verbose)
+                Debug.Log($"Returning card: {cardName}");
+
+            CardDeckCollider.enabled = true;
+            CardAnimator.SetTrigger(returnCard);
+
+            IssueFinishReset();
         }
 
-        CardAnimator.SetTrigger(dealCard);
+        public void _FinishReset()
+        {
+            ReturnCardToPool();
+            CardDeckCollider.enabled = true;
+        }
 
-        if (Verbose)
-            Debug.Log($"Cardmanager: Dealt card {Card.name}");
-    }
-
-    private void ReturnCardToPool()
-    {
-        if (Card != null)
+        private void IssueFinishReset()
         {
             if (Verbose)
-                Debug.Log($"CardManager: Setting Card {Card.name} to inactive and returning to pool");
-
-            Card.SetActive(false);
-            Pool.Return(Card);
+                Debug.Log("CardManager: Issuing Finish Reset");
+            SendCustomEventDelayedSeconds(nameof(_FinishReset), 3.0f);
         }
-        Card = null;
-    }
-
-
-    public void _ReturnCard()
-    {
-        string cardName;
-
-        if (Card == null)
-            cardName = "[null]";
-        else
-            cardName = Card.name;
-
-        if (Verbose)
-            Debug.Log($"Returning card: {cardName}");
-
-        CardDeckCollider.enabled = true;
-        CardAnimator.SetTrigger(returnCard);
-
-        IssueFinishReset();
-    }
-
-    public void _FinishReset()
-    {
-        ReturnCardToPool();
-        CardDeckCollider.enabled = true;
-    }
-
-    private void IssueFinishReset()
-    {
-        if (Verbose)
-            Debug.Log("CardManager: Issuing Finish Reset");
-        SendCustomEventDelayedSeconds(nameof(_FinishReset), 3.0f);
     }
 
 }

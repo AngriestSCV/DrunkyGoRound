@@ -4,33 +4,37 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
 
-public class PawnHandleNonOwner : UdonSharpBehaviour
+namespace AngryLabs.Props.DrunkyGoRound
 {
-    public Collider Collider;
-    public MeshRenderer Renderer;
-    private VRCPlayerApi OgOwner;
-    public GameObject PawnBase;
-
-    public void DoSetup(VRCPlayerApi newOwner)
+    public class PawnHandleNonOwner : UdonSharpBehaviour
     {
-        bool setting = Networking.LocalPlayer == newOwner;
-        OgOwner = newOwner;
-        Collider.enabled = setting;
-        Renderer.enabled = setting;
-    }
+        public Collider Collider;
+        public MeshRenderer Renderer;
+        private VRCPlayerApi OgOwner;
+        public GameObject PawnBase;
 
-    public override void OnPlayerLeft(VRCPlayerApi player)
-    {
-        base.OnPlayerLeft(player);
-
-        if (player == OgOwner)
+        public void DoSetup(VRCPlayerApi newOwner)
         {
-            Destroy(gameObject);
+            bool setting = Networking.LocalPlayer == newOwner;
+            OgOwner = newOwner;
+            Collider.enabled = setting;
+            Renderer.enabled = setting;
+        }
+
+        public override void OnPlayerLeft(VRCPlayerApi player)
+        {
+            base.OnPlayerLeft(player);
+
+            if (player == OgOwner)
+            {
+                Destroy(gameObject);
+            }
+        }
+
+        public override void OnDeserialization()
+        {
+            DoSetup(Networking.GetOwner(PawnBase));
         }
     }
 
-    public override void OnDeserialization()
-    {
-        DoSetup(Networking.GetOwner(PawnBase));
-    }
 }
