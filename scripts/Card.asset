@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c333ccfdd0cbdbc4ca30cef2dd6e6b9b, type: 3}
   m_Name: Card
   m_EditorClassIdentifier: 
-  serializedUdonProgramAsset: {fileID: 11400000, guid: 8f7b466e519a69049893a9a3da4af436,
+  serializedUdonProgramAsset: {fileID: 11400000, guid: c258ef214a260134d8f4a19aca248c70,
     type: 2}
   udonAssembly: 
   assemblyError: 
@@ -21,7 +21,7 @@ MonoBehaviour:
   compiledVersion: 2
   behaviourSyncMode: 0
   hasInteractEvent: 0
-  scriptID: -7325755765417691202
+  scriptID: -310150160439647768
   serializationData:
     SerializedFormat: 2
     SerializedBytes: 

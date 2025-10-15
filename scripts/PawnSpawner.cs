@@ -1,25 +1,29 @@
-﻿
-using System;
+﻿using System;
 using UdonSharp;
-using UnityEditor;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace AngryLabs.Props.DrunkyGoRound
 {
     public class PawnSpawner : UdonSharpBehaviour
     {
-        public GameObject core;
         public Transform PawnSpawnLocation;
 
         public Mesh[] meshes;
 
         public bool Verbose;
 
+        public GameObject[] AllPawns;
+
         public GameObject Spawn(VRCPlayerApi player)
         {
-            GameObject obj = Instantiate(core);
+            GameObject obj = FindPawn();
+            if (obj == null)
+            {
+                Debug.LogError("Could not find a pawn");
+                return null;
+            }
+
             Networking.SetOwner(player, obj);
 
             var phno = obj.GetComponentInChildren<PawnHandleNonOwner>();
@@ -30,7 +34,7 @@ namespace AngryLabs.Props.DrunkyGoRound
                 return null;
             }
 
-            phno.DoSetup(player);
+            phno.AssignPlayer(player);
 
             var mr = obj.GetComponentInChildren<MeshRenderer>();
             if (mr == null)
@@ -64,26 +68,46 @@ namespace AngryLabs.Props.DrunkyGoRound
             // TODO make this synced
             mainMat.color = Color.HSVToRGB(UnityEngine.Random.Range(0, 1.0f), 1.0f, 1.0f);
 
+            obj.transform.parent = PawnSpawnLocation;
+            obj.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             return obj;
         }
+
+        private GameObject FindPawn()
+        {
+            foreach (var pawn in AllPawns)
+            {
+                // var phno = pawn.GetComponentInChildren<PawnHandleNonOwner>();
+                // if (phno == null)
+                // {
+                //     Debug.LogError($"When building clone of {pawn.name} could not find a {nameof(PawnHandleNonOwner)}");
+                //     continue;
+                // }
+                // if( phno.OwningPlayerId < 0)
+                //     return pawn;
+
+                if (!pawn.activeSelf)
+                    return pawn;
+            }
+            return null;
+        }
+
 
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
             base.OnPlayerJoined(player);
 
-            if (Networking.IsOwner(gameObject))
+            if (Verbose)
             {
-                if (Verbose)
-                {
-                    VRCPlayerApi local = Networking.LocalPlayer;
-                    Debug.Log($"Player {local.displayName} spawning pawn for {player.displayName}");
-                }
-                GameObject pawn = Spawn(player);
-                pawn.transform.parent = PawnSpawnLocation;
-                pawn.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                VRCPlayerApi local = Networking.LocalPlayer;
+                Debug.Log($"Player {local.displayName} spawning pawn for {player.displayName}");
             }
+
+            GameObject pawn = Spawn(player);
+            if (pawn == null)
+                Debug.LogWarning("Failed to spawn pawn");
+            else if (Verbose)
+                Debug.Log($"Spaned pawn: {pawn.name}");
         }
-
     }
-
 }
