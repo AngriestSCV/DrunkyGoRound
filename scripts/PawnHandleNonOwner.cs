@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
@@ -6,15 +7,15 @@ namespace AngryLabs.Props.DrunkyGoRound
 {
     public class PawnHandleNonOwner : UdonSharpBehaviour
     {
-        public Collider Collider;
-        public MeshRenderer Renderer;
         public GameObject PawnBase;
 
         [UdonSynced]
-        public int OwningPlayerId = -1;
+        public int MeshChoice = -1;
 
         [UdonSynced]
-        public Vector3 StartingPosition;
+        public float HueChoice = -1.0f;
+
+        public Mesh[] Meshes;
 
         public bool verbose = false;
 
@@ -26,59 +27,51 @@ namespace AngryLabs.Props.DrunkyGoRound
                 {
                     Debug.LogError($"Found null pawn base on game object {gameObject}");
                 }
-                else
-                {
-                    StartingPosition = PawnBase.transform.position;
-                }
                 RequestSerialization();
             }
             OnDeserialization();
         }
 
-        public void AssignPlayer(VRCPlayerApi newOwner)
+        public override void OnDeserialization()
         {
-            if (newOwner == null)
+            if (MeshChoice < 0)
+                return;
+
+            MeshRenderer mr = PawnBase.GetComponentInChildren<MeshRenderer>();
+            if (mr == null)
             {
-                PawnBase.SetActive(false);
-                PawnBase.transform.SetPositionAndRotation(StartingPosition, Quaternion.identity);
+                Debug.Log($"When building clone of {PawnBase.name} could not find a MeshRenderer");
+            }
+
+            var mf = PawnBase.GetComponentInChildren<MeshFilter>();
+            if (mf == null)
+            {
+                Debug.Log($"When building clone of {PawnBase.name} cound not find MeshFilter");
+            }
+            if (mr.materials.Length != 2)
+            {
+                Debug.Log($"When building clone of {PawnBase.name} found {mr.materials.Length} materials instead of 2");
+            }
+
+            Mesh toSpawn = Meshes[MeshChoice];
+            mf.mesh = toSpawn;
+            Material mainMat = mr.materials[1];
+
+            mainMat.color = Color.HSVToRGB(HueChoice, 1.0f, 1.0f);
+        }
+
+        public void SetStats(int meshChoice, float hueChoice)
+        {
+            if (meshChoice >= Meshes.Length || meshChoice < 0)
+            {
+                Debug.LogError($"Refusing to set mesh to value of {meshChoice}");
                 return;
             }
 
-            if (verbose)
-                Debug.Log($"Assigning player {newOwner} to {PawnBase.gameObject.name}");
-
-            PawnBase.SetActive(true);
-            OwningPlayerId = newOwner.playerId;
-
+            MeshChoice = meshChoice;
+            HueChoice = hueChoice;
             RequestSerialization();
             OnDeserialization();
-        }
-
-        public override void OnPlayerLeft(VRCPlayerApi player)
-        {
-            if (verbose)
-                Debug.Log($"PawnHandleNonOwner::OnPlayerLeft - Player {player.displayName}:{player.playerId}");
-
-            base.OnPlayerLeft(player);
-
-            if (player.playerId == OwningPlayerId)
-            {
-                AssignPlayer(null);
-                OwningPlayerId = -1;
-            }
-        }
-
-        public override void OnDeserialization()
-        {
-            VRCPlayerApi local = Networking.LocalPlayer;
-            if (verbose)
-                Debug.Log($"PawnHandleNonOwner::OnDeserialization - Called on {local.displayName}:{local.playerId} for pawn: {PawnBase.name} owned by {OwningPlayerId}");
-
-            bool setting = local.playerId == OwningPlayerId;
-            Collider.enabled = setting;
-            Renderer.enabled = setting;
-
-            PawnBase.SetActive(OwningPlayerId != -1);
         }
     }
 }
